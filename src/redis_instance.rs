@@ -1,5 +1,4 @@
 use crate::tcp::Client;
-use std::default::Default;
 use tokio::io;
 use std::rc::Rc;
 use crate::result;

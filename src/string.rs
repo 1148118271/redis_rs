@@ -42,7 +42,9 @@ impl RedisInstance {
         Ok(result)
     }
 
-    pub async fn get_string(&self, k: &str) -> io::Result<result::Result<String>> {
+    pub async fn get_string(&self, k: &str)
+        -> io::Result<result::Result<String>>
+    {
         let vec = self.assembly_and_send(&["GET", k]).await?;
         let mut result = RString::validation(&vec);
         match result.state {

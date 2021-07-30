@@ -27,7 +27,7 @@ impl RedisClient {
 
     pub async fn connection(self) -> io::Result<Instance> {
         let client = Client::connect(format!("{}:{}", self.host, self.port)).await?;
-        let mut instance = Instance::init(client);
+        let instance = Instance::init(client);
         match self.pass {
             Some(p) => {
                 instance.login(&p).await?;

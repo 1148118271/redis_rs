@@ -1,4 +1,3 @@
-use std::net::TcpStream;
 
 mod tcp;
 mod redis_client;
@@ -14,9 +13,7 @@ pub use result::State;
 #[cfg(test)]
 mod test {
     use std::io::BufRead;
-
-
-
+    use crate::{redis_client, State};
 
     #[test]
     fn test1() {
@@ -26,5 +23,34 @@ mod test {
         println!("{:?}", result.next().unwrap());
         println!("{:?}", result.next().unwrap());
 
+    }
+
+    macro_rules! r#async_ {
+        ($e:expr) => {
+            tokio_test::block_on($e)
+        };
+    }
+
+
+    #[test]
+    fn test2() {
+        async_!(connection())
+    }
+
+    async fn connection() {
+        let client = redis_client::RedisClient::from("123456");
+        let instance = client.connection().await.unwrap();
+        let result = instance.set_string("aaa", "123").await.unwrap();
+        match result.state {
+            State::OK => {
+                println!("string set success -> {}", result.value);
+            }
+            State::ERROR => {
+                println!("string set error -> {}", result.value);
+            }
+            State::NULL => {
+                println!("result is null");
+            }
+        }
     }
 }
