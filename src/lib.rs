@@ -36,13 +36,42 @@ mod test {
     fn test2() {
         // async_!(set_str());
         // async_!(get_str());
-        async_!(append_str());
+        async_!(set_str_px());
     }
 
     async fn set_str() {
         let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
         // let state = x.set_string("aa", "").await.unwrap();
         let state = x.set_string("gxk", "gxk").await.unwrap();
+        match state {
+            State::OK(v) => {
+                println!("ok > {}", v)
+            }
+            State::ERROR(msg) => {
+                println!("err > {}", msg)
+            }
+        }
+    }
+
+
+    async fn set_str_ex() {
+        let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+        // let state = x.set_string("aa", "").await.unwrap();
+        let state = x.set_string_ex("gxk", "gxk", 50).await.unwrap();
+        match state {
+            State::OK(v) => {
+                println!("ok > {}", v)
+            }
+            State::ERROR(msg) => {
+                println!("err > {}", msg)
+            }
+        }
+    }
+
+    async fn set_str_px() {
+        let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+        // let state = x.set_string("aa", "").await.unwrap();
+        let state = x.set_string_px("gxk", "gxk", 30000).await.unwrap();
         match state {
             State::OK(v) => {
                 println!("ok > {}", v)
