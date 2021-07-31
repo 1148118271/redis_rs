@@ -1,7 +1,6 @@
 use crate::tcp::Client;
 use tokio::io;
 use std::rc::Rc;
-use crate::result;
 
 mod constant {
     pub const CRLF: &'static str = "\r\n";
@@ -10,12 +9,6 @@ mod constant {
 
     pub const STR_SYMBOL: &'static str = "$";
 }
-
-
-pub trait Validation<T> {
-    fn validation(v: &[u8]) -> result::Result<T>;
-}
-
 
 
 pub struct RedisInstance(Client);

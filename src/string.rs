@@ -1,64 +1,99 @@
-use crate::redis_instance::{RedisInstance, Validation};
+use crate::redis_instance::RedisInstance;
 use std::io;
-use crate::result;
 use crate::util;
 use crate::result::State;
 use std::io::BufRead;
-
-struct RString;
-
-impl Validation<String> for RString {
-
-    fn validation(v: &[u8]) -> result::Result<String> {
-        let r = util::to_string(&v[1..v.len() - 2]);
-        return if "-1".eq(&r) {
-            result::Result::new(State::NULL)
-        } else {
-            if v[0] as char == '-' {
-                result::Result::new(State::ERROR)
-            } else {
-                result::Result::new(State::OK)
-            }
-        }
-
-    }
-}
+use std::num::ParseIntError;
 
 impl RedisInstance {
-    pub async fn set_string(&self, k: &str, v: &str)
-        -> io::Result<result::Result<String>>
-    {
-        let vec = self.assembly_and_send(&["SET", k, v]).await?;
-        let mut result = RString::validation(&vec);
-        match result.state {
-            State::OK => {
-                result.from(util::to_string(&vec[1..vec.len() - 2]))
-            }
-            State::ERROR => {
-                result.from(util::to_string(&vec[1..vec.len() - 2]))
-            }
-            _ => {}
+
+    /// 将字符串值 value 关联到 key 。
+    /// 如果 key 已经持有其他值， SET 就覆写旧值，无视类型。
+    /// 返回值：
+    ///     在 Redis 2.6.12 版本以前， SET 命令总是返回 OK 。
+    ///     从 Redis 2.6.12 版本开始， SET 在设置操作成功完成时，才返回 OK 。
+    /// ```
+    ///       let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+    ///         let state = x.set_string("gxk", "gxk").await.unwrap();
+    ///         match state {
+    ///             redis_rs::State::OK(v) => {
+    ///                 println!("ok > {}", v)
+    ///             }
+    ///             redis_rs::State::ERROR(msg) => {
+    ///                 println!("err > {}", msg)
+    ///             }
+    ///         }
+    /// ```
+    pub async fn set_string(&self, k: &str, v: &str) -> io::Result<State<String>> {
+        if v.len() <= 0 {
+            panic!("value 不能为空!")
         }
-        Ok(result)
+        let vec = self.assembly_and_send(&["SET", k, v]).await?;
+        let msg = util::to_string(&vec[1..vec.len() - 2]);
+        return if vec[0] as char == '-' {
+            Ok(State::ERROR(msg))
+        } else {
+            Ok(State::OK(msg))
+        }
     }
 
-    pub async fn get_string(&self, k: &str)
-        -> io::Result<result::Result<String>>
-    {
+    /// 返回 key 所关联的字符串值。
+    /// 如果 key 不存在那么返回 None 。
+    /// 假如 key 储存的值不是字符串类型，返回一个错误，因为 GET 只能用于处理字符串值。
+    /// ```
+    ///         let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+    ///         let state = x.get_string("gxk").await.unwrap();
+    ///         match state {
+    ///             redis_rs::State::OK(v) => {
+    ///                 match v {
+    ///                     None => println!("值为空"),
+    ///                     Some(s) => println!("查询成功 -> {}", s)
+    ///                 }
+    ///             }
+    ///             redis_rs::State::ERROR(msg) => println!("err > {}", msg)
+    ///         }
+    /// ```
+    pub async fn get_string(&self, k: &str) -> io::Result<State<Option<String>>> {
         let vec = self.assembly_and_send(&["GET", k]).await?;
-        let mut result = RString::validation(&vec);
-        match result.state {
-            State::OK => {
-                let mut lines = vec.as_slice().lines();
-                lines.next();
-                let x = lines.next().unwrap().unwrap();
-                result.from(util::to_string(x.as_bytes()))
-            }
-            State::ERROR => {
-                result.from(util::to_string(&vec[1..vec.len() - 2]))
-            }
-            _ => {}
+        let msg = util::to_string(&vec[1..vec.len() - 2]);
+        return if vec[0] as char == '-' {
+            Ok(State::ERROR(msg))
+        } else if msg == "-1" {
+            Ok(State::OK(None))
+        } else {
+            let mut lines = vec.as_slice().lines();
+            lines.next();
+            Ok(match lines.next() {
+                None => State::OK(None),
+                Some(msg) => State::OK(Some(msg?)),
+            })
         }
-        Ok(result)
+    }
+
+    ///如果 key 已经存在并且是一个字符串， APPEND 命令将 value 追加到 key 原来的值的末尾。
+    /// 如果 key 不存在， APPEND 就简单地将给定 key 设为 value ，就像执行 SET key value 一样。
+    /// ```
+    ///         let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+    ///         let state = x.append("166", "123").await.unwrap();
+    ///         match state {
+    ///             redis_rs::State::OK(v) => {
+    ///                 println!("ok > {}", v)
+    ///             }
+    ///             redis_rs::State::ERROR(msg) => {
+    ///                 println!("err > {}", msg)
+    ///             }
+    ///         }
+    /// ```
+    pub async fn append(&self, k: &str, v: &str) -> Result<State<u32>, Box<dyn std::error::Error>> {
+        if v.len() <= 0 {
+            panic!("value 不能为空!")
+        }
+        let vec = self.assembly_and_send(&["APPEND", k, v]).await?;
+        let string = util::to_string(&vec[1..vec.len() - 2]);
+        return if vec[0] as char == '-' {
+            Ok(State::ERROR(string))
+        } else {
+            Ok(State::OK(string.parse::<u32>()?))
+        }
     }
 }

@@ -34,22 +34,49 @@ mod test {
 
     #[test]
     fn test2() {
-        async_!(connection())
+        // async_!(set_str());
+        // async_!(get_str());
+        async_!(append_str());
     }
 
-    async fn connection() {
-        let client = redis_client::RedisClient::from("123456");
-        let instance = client.connection().await.unwrap();
-        let result = instance.set_string("aaa", "123").await.unwrap();
-        match result.state {
-            State::OK => {
-                println!("string set success -> {}", result.value);
+    async fn set_str() {
+        let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+        // let state = x.set_string("aa", "").await.unwrap();
+        let state = x.set_string("gxk", "gxk").await.unwrap();
+        match state {
+            State::OK(v) => {
+                println!("ok > {}", v)
             }
-            State::ERROR => {
-                println!("string set error -> {}", result.value);
+            State::ERROR(msg) => {
+                println!("err > {}", msg)
             }
-            State::NULL => {
-                println!("result is null");
+        }
+    }
+
+
+    async fn get_str() {
+        let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+        let state = x.get_string("gxk").await.unwrap();
+        match state {
+            State::OK(v) => {
+                match v {
+                    None => println!("值为空"),
+                    Some(s) => println!("查询成功 -> {}", s)
+                }
+            }
+            State::ERROR(msg) => println!("err > {}", msg)
+        }
+    }
+
+    async fn append_str() {
+        let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+        let state = x.append("166", "123").await.unwrap();
+        match state {
+            State::OK(v) => {
+                println!("ok > {}", v)
+            }
+            State::ERROR(msg) => {
+                println!("err > {}", msg)
             }
         }
     }
