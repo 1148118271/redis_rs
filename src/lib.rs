@@ -2,13 +2,15 @@
 mod tcp;
 mod redis_client;
 mod redis_instance;
-mod string;
 mod result;
 mod util;
+mod command;
 
 pub use redis_client::RedisClient;
 
 pub use result::State;
+
+pub use command::*;
 
 #[cfg(test)]
 mod test {
@@ -36,7 +38,7 @@ mod test {
     fn test2() {
         // async_!(set_str());
         // async_!(get_str());
-        async_!(set_str_px());
+        async_!(dels());
     }
 
     async fn set_str() {
@@ -69,6 +71,7 @@ mod test {
     }
 
     async fn set_str_px() {
+
         let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
         // let state = x.set_string("aa", "").await.unwrap();
         let state = x.set_string_px("gxk", "gxk", 30000).await.unwrap();
@@ -100,6 +103,32 @@ mod test {
     async fn append_str() {
         let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
         let state = x.append("166", "123").await.unwrap();
+        match state {
+            State::OK(v) => {
+                println!("ok > {}", v)
+            }
+            State::ERROR(msg) => {
+                println!("err > {}", msg)
+            }
+        }
+    }
+
+    async fn del() {
+        let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+        let state = x.delete("gxk").await.unwrap();
+        match state {
+            State::OK(v) => {
+                println!("ok > {}", v)
+            }
+            State::ERROR(msg) => {
+                println!("err > {}", msg)
+            }
+        }
+    }
+
+    async fn dels() {
+        let x = redis_client::RedisClient::from("123456").connection().await.unwrap();
+        let state = x.delete_multiple(&[]).await.unwrap();
         match state {
             State::OK(v) => {
                 println!("ok > {}", v)
